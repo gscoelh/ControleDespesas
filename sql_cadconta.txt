@@ -1,0 +1,38 @@
+from core.db import get_connection
+
+def listar():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT C.CODCTA, C.DESCRCTA, A.CODCTAAGR, A.DESCRCTAAGR, T.TPCUSTO, C.NATUREZACTA, C.DTAABERTURACTA
+        FROM CADCONTA C
+        LEFT JOIN CADCTAAGR A ON C.CODCTAAGR = A.CODCTAAGR
+        LEFT JOIN CONTASPORCUSTO T ON C.TPCUSTO = T.TPCUSTO
+        ORDER BY C.CODCTA
+    """)
+    return cur.fetchall()
+
+def inserir(cod_conta, descricao, cod_agr, cod_custo, natureza, dtaabert):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO CADCONTA (CODCTA, DESCRCTA, CODCTAAGR, TPCUSTO, NATUREZACTA, DTAABERTURACTA)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (cod_conta,descricao, cod_agr, cod_custo, natureza, dtaabert))
+    conn.commit()
+
+def atualizar(descricao, cod_agr, cod_custo, natureza, dtaabert, cod_conta ):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE CADCONTA
+        SET DESCRCTA=?, CODCTAAGR=?, TPCUSTO=?, NATUREZACTA=?, DTAABERTURACTA=?
+        WHERE COD_CONTA=?
+    """, (descricao, cod_agr, cod_custo, natureza, dtaabert, cod_conta))
+    conn.commit()
+
+def excluir(cod_conta):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM CADCONTA WHERE CODCTA=?", (cod_conta,))
+    conn.commit()

@@ -1,0 +1,222 @@
+import pyodbc
+
+# Caminho do banco Access
+db_path = r"C:\Users\User\Documents\CONTROLE DESPESAS\NOVODESPESAS_OQUE TEM ESTE_20251120.mdb"
+
+# Conexão com o Access
+conn_str = (
+    r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};"
+    fr"Dbq={db_path};"
+)
+
+conn = pyodbc.connect(conn_str)
+cursor = conn.cursor()
+
+# -----------------------------
+# FUNÇÕES CRUD
+# -----------------------------
+
+def ler_lancamentos():
+    cursor.execute("SELECT * FROM LANCAMENTOS")
+    registros = cursor.fetchall()
+    print("\n--- REGISTROS ---")
+    for r in registros:
+        print(r)
+    print("-----------------\n")
+
+def inserir_lancamento(DATALANCTO, HISTORICO, VALLANCTO):
+    sql = """
+        INSERT INTO LANCAMENTOS (DATALANCTO, HISTORICO, VALLANCTO)
+        VALUES (?, ?, ?)
+    """
+    cursor.execute(sql, (DATALANCTO, HISTORICO, VALLANCTO))
+    conn.commit()
+    print("Registro inserido com sucesso.\n")
+
+def atualizar_lancamento(SEQUENCIA, nova_descricao, novo_valor):
+    sql = """
+        UPDATE LANCAMENTOS
+        SET HISTORICO = ?, VALLANCTO = ?
+        WHERE SEQUENCIA = ?
+    """
+    cursor.execute(sql, (nova_descricao, novo_valor, SEQUENCIA))
+    conn.commit()
+    print("Registro atualizado.\n")
+
+def excluir_varios(sequencias):
+    if not sequencias:
+        print("\nNenhuma SEQUENCIA informada.\n")
+        return
+
+    # Monta a lista de placeholders (?, ?, ?, ...)
+    placeholders = ", ".join(["?"] * len(sequencias))
+
+    sql = f"DELETE FROM LANCAMENTOS WHERE SEQUENCIA IN ({placeholders})"
+
+    cursor.execute(sql, sequencias)
+    conn.commit()
+
+    print(f"\nRegistros excluídos: {sequencias}\n")
+
+def excluir_faixa_sequencia(seq_ini, seq_fim):
+    sql = """
+        DELETE FROM LANCAMENTOS
+        WHERE SEQUENCIA BETWEEN ? AND ?
+    """
+    cursor.execute(sql, (seq_ini, seq_fim))
+    conn.commit()
+    print(f"\nRegistros com SEQUENCIA entre {seq_ini} e {seq_fim} foram excluídos.\n")
+
+def excluir_por_periodo(data_ini, data_fim):
+    sql = """
+        DELETE FROM LANCAMENTOS
+        WHERE DATALANCTO BETWEEN ? AND ?
+    """
+    cursor.execute(sql, (data_ini, data_fim))
+    conn.commit()
+    print(f"\nRegistros entre {data_ini} e {data_fim} foram excluídos.\n")
+
+# -----------------------------
+# MENU DE OPÇÕES
+# -----------------------------
+def menu():
+    while True:
+        print("===== MENU CRUD =====")
+        print("1 - Consultar lançamentos")
+        print("2 - Inserir lançamento")
+        print("3 - Atualizar lançamento")
+        print("4 - Excluir por SEQUENCIA (único)")
+        print("5 - Excluir vários por SEQUENCIA (lista)")
+        print("6 - Excluir por faixa de SEQUENCIA")
+        print("7 - Excluir por intervalo de datas")
+        print("8 - Buscar por período")
+        print("9 - Buscar por SEQUENCIA")
+        print("10 - Sair")
+
+        opcao = input("Escolha uma opção: ")
+
+        if opcao == "1":
+            ler_lancamentos()
+
+        elif opcao == "2":
+            data = input("Data (AAAA-MM-DD): ")
+            hist = input("Histórico: ")
+            valor = converter_valor_brasileiro(input("Valor (ex: 150,75): "))
+            inserir_lancamento(data, hist, valor)
+
+        elif opcao == "3":
+            seq = int(input("Número SEQUENCIA: "))
+            novo_hist = input("Novo histórico: ")
+            novo_valor = converter_valor_brasileiro(input("Novo valor (ex: 200,00): "))
+            atualizar_lancamento(seq, novo_hist, novo_valor)
+
+        elif opcao == "4":
+            seq = int(input("SEQUENCIA a excluir: "))
+            excluir_por_sequencia(seq)
+
+        elif opcao == "5":
+            lista = input("Informe SEQUENCIAS separadas por vírgula (ex: 1,2,5): ")
+            seq_list = [int(x.strip()) for x in lista.split(",")]
+            excluir_varios(seq_list)
+
+        elif opcao == "6":
+            seq_ini = int(input("SEQUENCIA inicial: "))
+            seq_fim = int(input("SEQUENCIA final: "))
+            excluir_faixa_sequencia(seq_ini, seq_fim)
+
+        elif opcao == "7":
+            data_ini = input("Data inicial (AAAA-MM-DD): ")
+            data_fim = input("Data final (AAAA-MM-DD): ")
+            excluir_por_periodo(data_ini, data_fim)
+
+        elif opcao == "8":
+            data_ini = input("Data inicial (AAAA-MM-DD): ")
+            data_fim = input("Data final (AAAA-MM-DD): ")
+            buscar_por_periodo(data_ini, data_fim)
+
+        elif opcao == "9":
+            seq = int(input("Número SEQUENCIA: "))
+            buscar_por_sequencia(seq)
+
+        elif opcao == "10":
+            print("Saindo...")
+            break
+
+        else:
+            print("Opção inválida.\n")
+
+#------------------------------
+# dusca por periodo especifivo
+#------------------------------
+def buscar_por_periodo(data_ini, data_fim):
+    sql = """
+        SELECT * FROM LANCAMENTOS
+        WHERE DATALANCTO BETWEEN ? AND ?
+        ORDER BY DATALANCTO
+    """
+    cursor.execute(sql, (data_ini, data_fim))
+    registros = cursor.fetchall()
+
+    print("\n--- RESULTADO DA BUSCA POR PERÍODO ---")
+    for r in registros:
+        print(r)
+    print("--------------------------------------\n")
+#-----------------------------------------
+# buscar por numero da sequencia
+#-----------------------------------------
+def buscar_por_sequencia(seq):
+    sql = "SELECT * FROM LANCAMENTOS WHERE SEQUENCIA = ?"
+    cursor.execute(sql, (seq,))
+    registros = cursor.fetchall()
+
+    print("\n--- RESULTADO DA BUSCA POR SEQUENCIA ---")
+    for r in registros:
+        print(r)
+    print("----------------------------------------\n")
+# -----------------------------
+# define valores em reais
+# -----------------------------
+def excluir_por_sequencia(sequencia):
+    # Verifica se o registro existe antes de excluir
+    sql_verifica = "SELECT * FROM LANCAMENTOS WHERE SEQUENCIA = ?"
+    cursor.execute(sql_verifica, (sequencia,))
+    registro = cursor.fetchone()
+
+    if registro is None:
+        print(f"\nNenhum registro encontrado com SEQUENCIA = {sequencia}\n")
+        return
+
+    # Exclui o registro
+    sql_excluir = "DELETE FROM LANCAMENTOS WHERE SEQUENCIA = ?"
+    cursor.execute(sql_excluir, (sequencia,))
+    conn.commit()
+
+    print(f"\nRegistro com SEQUENCIA = {sequencia} foi excluído com sucesso.\n")
+
+# -----------------------------
+# define valores em reais
+# -----------------------------
+def converter_valor_brasileiro(valor_str):
+    """
+    Converte valores no formato brasileiro:
+    '1.234,56' -> 1234.56
+    '150,75'   -> 150.75
+    '200'      -> 200.0
+    """
+    valor_str = valor_str.replace(".", "")   # remove separador de milhar
+    valor_str = valor_str.replace(",", ".")  # troca vírgula por ponto
+    return float(valor_str)
+
+
+# -----------------------------
+# EXECUTAR MENU
+# -----------------------------
+
+menu()
+
+# Fechar conexão
+cursor.close()
+conn.close()
+
+ 
+

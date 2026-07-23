@@ -1,0 +1,29 @@
+ajuste a manutenção da tabela contasporcusto pelos seguinete pontos:  1) preciso que cada um dos botoes tenha uma confirmação 2) a lista que aparece no pop-up e que tem o conteudo atual da tabela seja mostrado em formato de um spread e que permita selecionar as informações e popular os campos acima 3) não permita a inclusão de registros duplicados. Eu vou repassar o codigo dos 2 arquivos envolvidos que estamos criando no projeto para que seja adaptado pelo copilot
+
+Até aqui estes 3 cadastros parecem ter ficado conforme o esperado. alguns alinhamentos a serem feitos ma nada impeditivo. vamos prosseguir.  tenhou outros cadastros a serem elencados no menu cadastro que são para as tabelas 1)CUSTO; 2)ROTEIROCAPA; 3)ROTEIRODETA 4)TIPOLOTE. A estrutura destas tabelas está aqui: "TABELA: CUSTOS
+--------------------------------------------------
+  TPCUSTO   (VARCHAR)		TAM 5
+  NOMECUSTO   (VARCHAR)		TAM 50
+
+TABELA: ROTEIROCAPA
+--------------------------------------------------
+  ROTEIRO   (VARCHAR)		TAM 5
+  ROTNATUREZA   (VARCHAR)	TAM 1 DOMINIO D ou C	
+  ROTDESC   (VARCHAR)		TAM 50
+  CONTADANATUREZA   (VARCHAR)	TAM 5
+  TITULOLOTE   (VARCHAR)	TAM 4 PEGA DADOS DE TABELA TIPOLOTE
+
+
+TABELA: ROTEIRODETA
+--------------------------------------------------
+  ROTEIRO   (VARCHAR)
+  ROTNATUREZA   (VARCHAR) 	TAM 1 DOMINIO D ou C
+  ROTCTADEB   (VARCHAR)		TAM 5 DADOS DE CADCONTA
+  ROTCTACRED   (VARCHAR)	TAM 5 DADOS DE CADCONTA
+  ROTHIST   (VARCHAR)		TAM 50
+
+TABELA TIPOLOTE
+--------------------------------------------------
+CODLOTE		(VARCHAR) 	TAM 5
+DESCRLOTE	(VARCHAR)	TAM 50
+DTAABERTURA	DATA ABREVIADA	DATA" Eu preciso fazer o CRUD delas no mesmo modelo das antariores a saber: a 1)Custos e simples e depois de pronta vamos usar o seu conteudo para popular um combo na manutenção da tablea contaspocusto para escolher os possiveis nomes a serem usados naquela tabela. Por ora vamos somente criar considerando o tamanho dos campos criando o spread , selecionando do spread caso exista para popular os textbox e emitir as mensagens. mesmo processo das que ja fizemos. A 2)ROTEIROCAPA mesmo modelo de tela e SQL que ja usamos e a coluna rotnatureza é um radio para d - Debito ou C - Credito a coluna conta da natureza deve ser um combobox com o conteudo da tabela cadconta e titulolote é um combo alimentado pela tabela tipolote 3) ROTEIRODETA é montada sobre 3 combobox sendo: a coluna roteiro que venm dados da tabela roteiro capa, a coluna rotctadeb e rotctacre são 2 combobox com dados da cadconta e a coluna  rotnatureza é um radio para d - Debito ou C - Credito e a ultima 4)TIPOLOTE mesmo modelo e obedecer somente os tamanhos especificados na estrutura da tabela passada aqui neste prompt. Formate os py SQL e TELA e libere aqui para que eu possa criar a estrutura conforme sua montagem

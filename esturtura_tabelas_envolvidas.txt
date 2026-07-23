@@ -1,0 +1,22 @@
+TABELA: CADCONTA
+--------------------------------------------------
+  CODCTA   (VARCHAR) TAM 5 
+  CODCTAAGR   (VARCHAR) TAM 5
+  DESCRCTA   (VARCHAR) TAM 50
+  TPCUSTO   (VARCHAR) TAM 5
+  NATUREZACTA   (VARCHAR) TAM 1
+  DTAABERTURACTA   (DATETIME) DATA ABREVIADA
+
+
+TABELA: CADCTAAGR
+--------------------------------------------------
+  CODCTAAGR   (VARCHAR)  TAM 5
+  DESCRCTAAGR   (VARCHAR) TAM 50
+  DTAABERTURA   (DATETIME) DATA ABREVIADA
+
+
+TABELA: CONTASPORCUSTO
+--------------------------------------------------
+  TPCUSTO   (VARCHAR) TAM 5
+  CONTA   (VARCHAR)  TAM 5
+  PERCENTUAL   (VARCHAR) TAM 4

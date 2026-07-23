@@ -1,0 +1,44 @@
+import configparser
+import os
+
+INI_PATH = "config.ini"
+print("aqui")
+# caminhos dos bancos
+DB_DESENV = r"C:\Users\User\Documents\CONTROLE DESPESAS\NOVODESPESAS_TESTE.mdb"
+DB_PRODUC = r"C:\Users\User\Documents\CONTROLE DESPESAS\NOVODESPESAS_OFICIAL.mdb"
+#DB_PRODUC = r"C:\Users\User\OneDrive\Documents\CONTROLE DESPESAS\NOVODESPESAS.mdb"
+config = configparser.ConfigParser()
+
+# se não existir, cria padrão
+if not os.path.exists(INI_PATH):
+    config["AMBIENTE"] = {
+        "MODO": "DESENV",
+        "MOSTRAR_ALERTA": "SIM"
+    }
+    with open(INI_PATH, "w") as f:
+        config.write(f)
+
+# carrega
+config.read(INI_PATH)
+
+def get_modo():
+    return config["AMBIENTE"]["MODO"]
+
+def get_alerta():
+    return config["AMBIENTE"]["MOSTRAR_ALERTA"]
+
+def get_db_path():
+    if get_modo() == "DESENV":
+        return DB_DESENV
+    else:
+        return DB_PRODUC
+
+def set_modo(novo_modo):
+    config["AMBIENTE"]["MODO"] = novo_modo
+    with open(INI_PATH, "w") as f:
+        config.write(f)
+
+def set_alerta(valor):
+    config["AMBIENTE"]["MOSTRAR_ALERTA"] = valor
+    with open(INI_PATH, "w") as f:
+        config.write(f)

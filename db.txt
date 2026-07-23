@@ -1,0 +1,12 @@
+import pyodbc
+
+DB_PATH = r"C:\Users\User\Documents\CONTROLE DESPESAS\NOVODESPESAS_OQUE TEM ESTE_20251120.mdb"
+
+def get_connection():
+    conn_str = (
+        r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};"
+        fr"Dbq={DB_PATH};"
+    )
+    print(conn_str)
+    conn = pyodbc.connect(conn_str)
+    return conn

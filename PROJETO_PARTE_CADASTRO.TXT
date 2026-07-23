@@ -1,0 +1,633 @@
+*--------------------------------------------SQL_CADCONTA--------------------------------*
+from core.db import get_connection
+
+def listar():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT C.CODCTA, C.DESCRCTA, A.CODCTAAGR, A.DESCRCTAAGR,
+               T.TPCUSTO, C.NATUREZACTA, C.DTAABERTURACTA
+        FROM CADCONTA C
+        LEFT JOIN CADCTAAGR A ON C.CODCTAAGR = A.CODCTAAGR 
+        LEFT JOIN CONTASPORCUSTO T ON C.TPCUSTO = T.TPCUSTO
+        ORDER BY C.CODCTA
+    """)
+    
+    return cur.fetchall()
+
+def existe(cod_conta):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM CADCONTA WHERE CODCTA=?", (cod_conta,))
+    return cur.fetchone()[0] > 0
+
+def inserir(cod_conta, descricao, cod_agr, cod_custo, natureza, dtaabert):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO CADCONTA (CODCTA, DESCRCTA, CODCTAAGR, TPCUSTO, NATUREZACTA, DTAABERTURACTA)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (cod_conta, descricao, cod_agr, cod_custo, natureza, dtaabert))
+    conn.commit()
+
+def atualizar(cod_conta, descricao, cod_agr, cod_custo, natureza, dtaabert):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE CADCONTA
+        SET DESCRCTA=?, CODCTAAGR=?, TPCUSTO=?, NATUREZACTA=?, DTAABERTURACTA=?
+        WHERE CODCTA=?
+    """, (descricao, cod_agr, cod_custo, natureza, dtaabert, cod_conta))
+    conn.commit()
+
+def excluir(cod_conta):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM CADCONTA WHERE CODCTA=?", (cod_conta,))
+    conn.commit()
+
+# LISTAS PARA COMBOBOXES
+def listar_grupos():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT CODCTAAGR, DESCRCTAAGR FROM CADCTAAGR ORDER BY CODCTAAGR")
+    return cur.fetchall()
+
+def listar_tipos_custo():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT TPCUSTO FROM CONTASPORCUSTO GROUP BY TPCUSTO ORDER BY TPCUSTO")
+    return cur.fetchall()
+
+
+*--------------------------------------------SQL_CADCTAAGR--------------------------------*
+from core.db import get_connection
+
+def listar():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT CODCTAAGR, DESCRCTAAGR, DTAABERTURA
+        FROM CADCTAAGR
+        ORDER BY CODCTAAGR
+    """)
+    return cur.fetchall()
+
+
+def inserir(cod, descricao, dtaabert):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO CADCTAAGR (CODCTAAGR, DESCRCTAAGR, DTAABERTURA) VALUES (?, ?, ?)", (cod, descricao, dtaabert))
+    conn.commit()
+
+def atualizar(cod, descricao):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE CADCTAAGR SET DESCRCTAAGR=? WHERE CODCTAAGR=?", (descricao, cod))
+    conn.commit()
+
+def excluir(cod):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM CADCTAAGR WHERE CODCTAAGR=?", (cod,))
+    conn.commit()
+def existe(cod):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM CADCTAAGR WHERE CODCTAAGR=?", (cod,))
+    return cur.fetchone()[0] > 0
+
+
+
+*------------------  SQL_CONTASPOCUSTO ----------------------------*
+from core.db import get_connection
+
+def listar():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT TPCUSTO, CONTA, PERCENTUAL FROM CONTASPORCUSTO ORDER BY TPCUSTO")
+    return cur.fetchall()
+
+def existe(tpCusto, conta):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM CONTASPORCUSTO WHERE TPCUSTO=? AND CONTA=?", (tpCusto, conta))
+    return cur.fetchone()[0] > 0
+
+def inserir(tpCusto, conta, percentual):
+    if existe(tpCusto, conta):
+        return False  # já existe
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO CONTASPORCUSTO (TPCUSTO, CONTA, PERCENTUAL) VALUES (?, ?, ?)", 
+                (tpCusto, conta, percentual))
+    conn.commit()
+    return True
+
+def atualizar(tpCusto, conta, percentual):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE CONTASPORCUSTO SET PERCENTUAL=? WHERE TPCUSTO=? AND CONTA=?", 
+                (percentual, tpCusto, conta))
+    conn.commit()
+
+def excluir(tpCusto, conta):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM CONTASPORCUSTO WHERE TPCUSTO=? AND CONTA=?", (tpCusto, conta))
+    conn.commit()
+
+
+*-------------------- TELA_CADCONTA ------------------------------------*
+import tkinter as tk
+from tkinter import messagebox, ttk
+import sql.sql_cadconta as sql
+
+def tela_cadconta():
+
+    registro_original = {"CODCTA": None}
+
+    def carregar_comboboxes():
+        grupos = sql.listar_grupos()
+        combo_ctaagr['values'] = [f"{g[0]} - {g[1]}" for g in grupos]
+
+        custos = sql.listar_tipos_custo()
+        combo_tpcusto['values'] = [c[0] for c in custos]
+
+    def atualizar_lista():
+        for item in tree.get_children():
+            tree.delete(item)
+
+        for r in sql.listar():
+            tree.insert("", tk.END, values=(r[0], r[1], r[2], r[4], r[5], r[6]))
+
+    def preencher_campos(event):
+        item = tree.selection()
+        if item:
+            valores = tree.item(item, "values")
+
+            entry_cod.delete(0, tk.END)
+            entry_cod.insert(0, valores[0])
+
+            entry_desc.delete(0, tk.END)
+            entry_desc.insert(0, valores[1])
+
+            combo_ctaagr.set(valores[2])
+            combo_tpcusto.set(valores[3])
+
+            entry_natureza.delete(0, tk.END)
+            entry_natureza.insert(0, valores[4])
+
+            entry_dtaabert.delete(0, tk.END)
+            entry_dtaabert.insert(0, valores[5])
+
+            registro_original["CODCTA"] = valores[0]
+
+    def inserir():
+        if not messagebox.askyesno("Confirmação", "Deseja inserir esta conta?"):
+            return
+
+        cod = entry_cod.get()
+        desc = entry_desc.get()
+        agr = combo_ctaagr.get().split(" - ")[0]
+        custo = combo_tpcusto.get()
+        natureza = entry_natureza.get()
+        dtaabert = entry_dtaabert.get()
+
+        if sql.existe(cod):
+            messagebox.showwarning("Duplicado", "Já existe uma conta com este código.")
+            return
+
+        sql.inserir(cod, desc, agr, custo, natureza, dtaabert)
+        atualizar_lista()
+        messagebox.showinfo("OK", "Conta inserida.")
+
+    def atualizar():
+        if not messagebox.askyesno("Confirmação", "Deseja atualizar esta conta?"):
+            return
+
+        cod_original = registro_original["CODCTA"]
+
+        if cod_original is None:
+            messagebox.showwarning("Erro", "Selecione uma conta antes de atualizar.")
+            return
+
+        if not sql.existe(cod_original):
+            messagebox.showerror("Inexistente", "A conta original não existe mais.")
+            return
+
+        cod_novo = entry_cod.get()
+        desc = entry_desc.get()
+        agr = combo_ctaagr.get().split(" - ")[0]
+        custo = combo_tpcusto.get()
+        natureza = entry_natureza.get()
+        dtaabert = entry_dtaabert.get()
+
+        if cod_novo != cod_original and sql.existe(cod_novo):
+            messagebox.showwarning("Duplicado", "Já existe uma conta com este novo código.")
+            return
+
+        sql.excluir(cod_original)
+        sql.inserir(cod_novo, desc, agr, custo, natureza, dtaabert)
+
+        atualizar_lista()
+        messagebox.showinfo("OK", "Conta atualizada.")
+
+        registro_original["CODCTA"] = None
+
+    def excluir():
+        if not messagebox.askyesno("Confirmação", "Deseja excluir esta conta?"):
+            return
+
+        cod = entry_cod.get()
+
+        if not sql.existe(cod):
+            messagebox.showerror("Inexistente", "Esta conta não existe.")
+            return
+
+        sql.excluir(cod)
+        atualizar_lista()
+        messagebox.showinfo("OK", "Conta excluída.")
+
+    janela = tk.Toplevel()
+    janela.title("Cadastro de Contas")
+    janela.geometry("700x700")
+
+    tk.Label(janela, text="Código da Conta").pack()
+    entry_cod = tk.Entry(janela)
+    entry_cod.pack()
+
+    tk.Label(janela, text="Descrição da Conta").pack()
+    entry_desc = tk.Entry(janela)
+    entry_desc.pack()
+
+    tk.Label(janela, text="Conta Aglutinadora (CADCTAAGR)").pack()
+    combo_ctaagr = ttk.Combobox(janela, width=50)
+    combo_ctaagr.pack()
+
+    tk.Label(janela, text="Tipo de Custo (CONTASPORCUSTO)").pack()
+    combo_tpcusto = ttk.Combobox(janela, width=50)
+    combo_tpcusto.pack()
+
+    tk.Label(janela, text="Natureza da Conta").pack()
+    entry_natureza = tk.Entry(janela)
+    entry_natureza.pack()
+
+    tk.Label(janela, text="Data de Abertura").pack()
+    entry_dtaabert = tk.Entry(janela)
+    entry_dtaabert.pack()
+
+    tk.Button(janela, text="Inserir", command=inserir).pack(pady=5)
+    tk.Button(janela, text="Atualizar", command=atualizar).pack(pady=5)
+    tk.Button(janela, text="Excluir", command=excluir).pack(pady=5)
+
+    colunas = ("CODCTA", "DESCRCTA", "CODCTAAGR", "TPCUSTO", "NATUREZA", "DTAABERT")
+    tree = ttk.Treeview(janela, columns=colunas, show="headings", height=15)
+
+    for col in colunas:
+        tree.heading(col, text=col)
+        tree.column(col, width=120)
+
+    frame_tree = tk.Frame(janela)
+    frame_tree.pack(pady=10)
+
+    tree.pack(side="left")
+    scrollbar = ttk.Scrollbar(frame_tree, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    scrollbar.pack(side="right", fill="y")
+
+    tree.bind("<<TreeviewSelect>>", preencher_campos)
+
+    carregar_comboboxes()
+    atualizar_lista()
+
+*----------------------- TELA_CADCTAAGR --------------------------------*
+import tkinter as tk
+from tkinter import messagebox, ttk
+import sql.sql_cadctaagr as sql
+
+def tela_cadctaagr():
+
+    registro_original = {"CODCTAAGR": None}
+
+    def atualizar_lista():
+        for item in tree.get_children():
+            tree.delete(item)
+
+        for r in sql.listar():
+            tree.insert("", tk.END, values=(r[0], r[1], r[2]))
+
+    def preencher_campos(event):
+        item = tree.selection()
+        if item:
+            valores = tree.item(item, "values")
+
+            entry_cod.delete(0, tk.END)
+            entry_cod.insert(0, valores[0])
+
+            entry_desc.delete(0, tk.END)
+            entry_desc.insert(0, valores[1])
+
+            entry_dta.delete(0, tk.END)
+            entry_dta.insert(0, valores[2])
+
+            registro_original["CODCTAAGR"] = valores[0]
+
+    def inserir():
+        if not messagebox.askyesno("Confirmação", "Deseja inserir este grupo?"):
+            return
+
+        cod = entry_cod.get()
+        desc = entry_desc.get()
+        dta = entry_dta.get()
+
+        if sql.existe(cod):
+            messagebox.showwarning("Duplicado", "Já existe um grupo com este código.")
+            return
+
+        sql.inserir(cod, desc, dta)
+        atualizar_lista()
+        messagebox.showinfo("OK", "Grupo inserido.")
+
+    def atualizar():
+        if not messagebox.askyesno("Confirmação", "Deseja atualizar este grupo?"):
+            return
+
+        cod_original = registro_original["CODCTAAGR"]
+
+        if cod_original is None:
+            messagebox.showwarning("Erro", "Selecione um grupo antes de atualizar.")
+            return
+
+        if not sql.existe(cod_original):
+            messagebox.showerror("Inexistente", "O grupo original não existe mais.")
+            return
+
+        cod_novo = entry_cod.get()
+        desc = entry_desc.get()
+        dta = entry_dta.get()
+
+        if cod_novo != cod_original and sql.existe(cod_novo):
+            messagebox.showwarning("Duplicado", "Já existe um grupo com este novo código.")
+            return
+
+        sql.excluir(cod_original)
+        sql.inserir(cod_novo, desc, dta)
+
+        atualizar_lista()
+        messagebox.showinfo("OK", "Grupo atualizado.")
+
+        registro_original["CODCTAAGR"] = None
+
+    def excluir():
+        if not messagebox.askyesno("Confirmação", "Deseja excluir este grupo?"):
+            return
+
+        cod = entry_cod.get()
+
+        if not sql.existe(cod):
+            messagebox.showerror("Inexistente", "Este grupo não existe.")
+            return
+
+        sql.excluir(cod)
+        atualizar_lista()
+        messagebox.showinfo("OK", "Grupo excluído.")
+
+    janela = tk.Toplevel()
+    janela.title("Cadastro de Grupos de Contas")
+    janela.geometry("600x600")
+
+    tk.Label(janela, text="Código do Grupo").pack()
+    entry_cod = tk.Entry(janela)
+    entry_cod.pack()
+
+    tk.Label(janela, text="Descrição do Grupo").pack()
+    entry_desc = tk.Entry(janela)
+    entry_desc.pack()
+
+    tk.Label(janela, text="Data de Abertura").pack()
+    entry_dta = tk.Entry(janela)
+    entry_dta.pack()
+
+    tk.Button(janela, text="Inserir", command=inserir).pack(pady=5)
+    tk.Button(janela, text="Atualizar", command=atualizar).pack(pady=5)
+    tk.Button(janela, text="Excluir", command=excluir).pack(pady=5)
+
+    frame_tree = tk.Frame(janela)
+    frame_tree.pack(pady=10)
+
+    colunas = ("CODCTAAGR", "DESCRCTAAGR", "DTAABERTURA")
+    tree = ttk.Treeview(frame_tree, columns=colunas, show="headings", height=15)
+
+    for col in colunas:
+        tree.heading(col, text=col)
+        tree.column(col, width=150)
+
+    scrollbar = ttk.Scrollbar(frame_tree, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+
+    tree.grid(row=0, column=0)
+    scrollbar.grid(row=0, column=1, sticky="ns")
+
+    tree.bind("<<TreeviewSelect>>", preencher_campos)
+
+    atualizar_lista()
+
+
+*----------------- TELA_CONTASPOCUSTO --------------------------*
+import tkinter as tk
+from tkinter import messagebox, ttk
+import sql.sql_contaspocusto as sql
+
+def tela_contaspocusto():
+
+    # Guarda o registro original selecionado no Treeview
+    registro_original = {"TPCUSTO": None, "CONTA": None}
+
+    def atualizar_lista():
+        for item in tree.get_children():
+            tree.delete(item)
+
+        for r in sql.listar():
+            # Inserção limpa no Treeview (sem aspas, sem parênteses)
+            tree.insert("", tk.END, values=(r[0], r[1], r[2]))
+
+    def preencher_campos(event):
+        item = tree.selection()
+        if item:
+            valores = tree.item(item, "values")
+
+            # Preenche os campos
+            entry_tpCusto.delete(0, tk.END)
+            entry_tpCusto.insert(0, valores[0])
+
+            entry_Conta.delete(0, tk.END)
+            entry_Conta.insert(0, valores[1])
+
+            entry_percentual.delete(0, tk.END)
+            entry_percentual.insert(0, valores[2])
+
+            # Guarda o registro original para validação futura
+            registro_original["TPCUSTO"] = valores[0]
+            registro_original["CONTA"] = valores[1]
+
+    def inserir():
+        if not messagebox.askyesno("Confirmação", "Deseja inserir este registro?"):
+            return
+
+        tp = entry_tpCusto.get()
+        conta = entry_Conta.get()
+        perc = entry_percentual.get()
+
+        if sql.existe(tp, conta):
+            messagebox.showwarning("Duplicado", "Este registro já existe!")
+            return
+
+        ok = sql.inserir(tp, conta, perc)
+        if ok:
+            atualizar_lista()
+            messagebox.showinfo("OK", "Tipo de custo inserido.")
+        else:
+            messagebox.showwarning("Erro", "Não foi possível inserir.")
+
+    def atualizar():
+        if not messagebox.askyesno("Confirmação", "Deseja atualizar este registro?"):
+            return
+
+        tp_original = registro_original["TPCUSTO"]
+        conta_original = registro_original["CONTA"]
+
+        # Nenhum registro selecionado antes
+        if tp_original is None or conta_original is None:
+            messagebox.showwarning("Erro", "Selecione um registro antes de atualizar.")
+            return
+
+        # Verifica se o registro original ainda existe no banco
+        if not sql.existe(tp_original, conta_original):
+            messagebox.showerror("Inexistente", "O registro original não existe mais no cadastro.")
+            return
+
+        # Novos valores digitados pelo usuário
+        tp_novo = entry_tpCusto.get()
+        conta_novo = entry_Conta.get()
+        perc_novo = entry_percentual.get()
+
+        # Se o usuário mudou a chave primária, verificar duplicidade
+        if (tp_novo != tp_original or conta_novo != conta_original) and sql.existe(tp_novo, conta_novo):
+            messagebox.showwarning("Duplicado", "Já existe um registro com esta nova chave.")
+            return
+
+        # Atualiza corretamente
+        sql.excluir(tp_original, conta_original)  # remove o antigo
+        sql.inserir(tp_novo, conta_novo, perc_novo)  # insere o novo
+
+        atualizar_lista()
+        messagebox.showinfo("OK", "Registro atualizado com sucesso.")
+
+        # Limpa registro original
+        registro_original["TPCUSTO"] = None
+        registro_original["CONTA"] = None
+
+    def excluir():
+        if not messagebox.askyesno("Confirmação", "Deseja excluir este registro?"):
+            return
+
+        tp = entry_tpCusto.get()
+        conta = entry_Conta.get()
+
+        if not sql.existe(tp, conta):
+            messagebox.showerror("Inexistente", "Este registro não existe.")
+            return
+
+        sql.excluir(tp, conta)
+        atualizar_lista()
+        messagebox.showinfo("OK", "Tipo de custo excluído.")
+
+    # Construção da janela
+    janela = tk.Toplevel()
+    janela.title("Cadastro de Tipos de Custo")
+    janela.geometry("600x600")
+
+    tk.Label(janela, text="Código Tipo de Custo").pack()
+    entry_tpCusto = tk.Entry(janela)
+    entry_tpCusto.pack()
+
+    tk.Label(janela, text="Conta Contábil envolvida").pack()
+    entry_Conta = tk.Entry(janela)
+    entry_Conta.pack()
+
+    tk.Label(janela, text="Percentual").pack()
+    entry_percentual = tk.Entry(janela)
+    entry_percentual.pack()
+
+    tk.Button(janela, text="Inserir", command=inserir).pack(pady=5)
+    tk.Button(janela, text="Atualizar", command=atualizar).pack(pady=5)
+    tk.Button(janela, text="Excluir", command=excluir).pack(pady=5)
+
+    # TREEVIEW (spreadsheet-like)
+    colunas = ("TPCUSTO", "CONTA", "PERCENTUAL")
+    tree = ttk.Treeview(janela, columns=colunas, show="headings", height=15)
+
+    for col in colunas:
+        tree.heading(col, text=col)
+        tree.column(col, width=150)
+
+    tree.pack(pady=10)
+    tree.bind("<<TreeviewSelect>>", preencher_campos)
+
+    atualizar_lista()
+
+
+*-------------------- MAIN         -----------------------------*
+import tkinter as tk
+from telas.tela_cadctaagr import tela_cadctaagr
+from telas.tela_contaspocusto import tela_contaspocusto
+from telas.tela_cadconta import tela_cadconta
+
+def main():
+    root = tk.Tk()
+    root.title("Sistema de Cadastros")
+    root.geometry("600x400")
+
+    # === MENU PRINCIPAL ===
+    menubar = tk.Menu(root)
+
+    # === MENU CADASTRO ===
+    menu_cadastro = tk.Menu(menubar, tearoff=0)
+    menu_cadastro.add_command(label="Cadastro de Grupos", command=tela_cadctaagr)
+    menu_cadastro.add_command(label="Cadastro de Tipos de Custo", command=tela_contaspocusto)
+    menu_cadastro.add_command(label="Cadastro de Contas", command=tela_cadconta)
+
+    menubar.add_cascade(label="Cadastro", menu=menu_cadastro)
+
+    # === MENU FINALIZAR ===
+    menu_finalizar = tk.Menu(menubar, tearoff=0)
+    menu_finalizar.add_command(label="Sair do Sistema", command=root.quit)
+
+    menubar.add_cascade(label="Finalizar", menu=menu_finalizar)
+
+    # Aplica o menu na janela
+    root.config(menu=menubar)
+
+    # Mensagem inicial ou área futura para dashboard
+    label = tk.Label(root, text="Bem-vindo ao Sistema de Cadastros", font=("Arial", 16))
+    label.pack(pady=40)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
+
+
+
+*--------------------  DB.PY --------------------*
+import pyodbc
+
+DB_PATH = r"C:\Users\User\Documents\CONTROLE DESPESAS\NOVODESPESAS_OQUE TEM ESTE_20251120.mdb"
+
+def get_connection():
+    conn_str = (
+        r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};"
+        fr"Dbq={DB_PATH};"
+    )
+    return pyodbc.connect(conn_str)
