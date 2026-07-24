@@ -64,3 +64,20 @@ def buscar_conta(cod_roteiro):
     """, (cod_roteiro,))
     resultado = cur.fetchone()
     return resultado[0] if resultado else None
+
+def buscar_titulolote(cod_roteiro):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT TITULOLOTE
+        FROM ROTEIROCAPA
+        WHERE ROTEIRO = ?
+    """, (cod_roteiro,))
+
+    resultado = cur.fetchone()
+
+    if resultado:
+        return resultado[0]   # retorna o título do lote
+    else:
+        return None

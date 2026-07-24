@@ -63,3 +63,38 @@ def listar_tipos_custo():
     cur = conn.cursor()
     cur.execute("SELECT TPCUSTO FROM CONTASPORCUSTO GROUP BY TPCUSTO ORDER BY TPCUSTO")
     return cur.fetchall()
+def listar_por_grupo(cod_agr):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    if cod_agr == "TODOS":
+        cur.execute("""
+            SELECT 
+                C.CODCTA,
+                C.DESCRCTA,
+                C.CODCTAAGR,
+                A.DESCRCTAAGR,
+                C.TPCUSTO,
+                C.NATUREZACTA,
+                FORMAT(C.DTAABERTURACTA, 'dd/mm/yyyy')
+            FROM CADCONTA AS C
+            LEFT JOIN CADCTAAGR AS A ON C.CODCTAAGR = A.CODCTAAGR
+            ORDER BY C.CODCTA
+        """)
+    else:
+        cur.execute("""
+            SELECT 
+                C.CODCTA,
+                C.DESCRCTA,
+                C.CODCTAAGR,
+                A.DESCRCTAAGR,
+                C.TPCUSTO,
+                C.NATUREZACTA,
+                FORMAT(C.DTAABERTURACTA, 'dd/mm/yyyy')
+            FROM CADCONTA AS C
+            LEFT JOIN CADCTAAGR AS A ON C.CODCTAAGR = A.CODCTAAGR
+            WHERE C.CODCTAAGR = ?
+            ORDER BY C.CODCTA
+        """, (cod_agr,))
+
+    return cur.fetchall()

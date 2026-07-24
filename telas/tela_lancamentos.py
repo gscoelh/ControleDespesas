@@ -17,7 +17,7 @@ def tela_lancamentos():
 
     janela = tk.Toplevel()
     janela.title("Lançamentos Diários")
-    janela.geometry("1200x800")
+    janela.geometry("1200x900")
     janela.grab_set()
 
     ultimo_comprovante = {"nome": ""}
@@ -41,6 +41,17 @@ def tela_lancamentos():
 
     btn_carregar = tk.Button(frame_top, text="Carregar")
     btn_carregar.pack(side="left", padx=10)
+
+    # ===========================
+    # SALDO INICIAL (ACIMA DO SPREAD)
+    # ===========================
+    frame_saldo_inicial = tk.Frame(janela)
+    frame_saldo_inicial.pack(fill="x", pady=10)
+
+    tk.Label(frame_saldo_inicial, text="Saldo Inicial").pack(side="left", padx=10)
+    entry_saldo_inicial = tk.Entry(frame_saldo_inicial, width=15)
+    entry_saldo_inicial.pack(side="left")
+    entry_saldo_inicial.insert(0, "0,00")
 
     # ===========================
     # VALIDAR COMPETÊNCIA
@@ -115,6 +126,98 @@ def tela_lancamentos():
         tree.column(col, width=180)
 
     tree.pack()
+    # ===========================
+    # TOTAIS (ABAIXO DO SPREAD)
+    # ===========================
+    frame_totais = tk.Frame(janela)
+    frame_totais.pack(fill="x", pady=10)
+
+    tk.Label(frame_totais, text="Total Crédito (C)").grid(row=0, column=0, padx=10)
+    entry_total_c = tk.Entry(frame_totais, width=15, state="readonly")
+    entry_total_c.grid(row=0, column=1)
+
+    tk.Label(frame_totais, text="Total Débito (D)").grid(row=0, column=2, padx=10)
+    entry_total_d = tk.Entry(frame_totais, width=15, state="readonly")
+    entry_total_d.grid(row=0, column=3)
+
+    tk.Label(frame_totais, text="Saldo Final").grid(row=0, column=4, padx=10)
+    entry_saldo_final = tk.Entry(frame_totais, width=15, state="readonly")
+    entry_saldo_final.grid(row=0, column=5)
+
+    # ===========================
+    # FUNÇÃO DE CÁLCULO DE SALDOS
+    # ===========================
+    def calcular_saldos():
+        try:
+            saldo_inicial = float(entry_saldo_inicial.get().replace(".", "").replace(",", "."))
+        except:
+            saldo_inicial = 0.0
+
+        total_c = 0.0
+        total_d = 0.0
+
+        comp = entry_comp.get().strip()
+        if len(comp) != 6 or not combo_roteiro.get():
+            # zera se não houver contexto
+            entry_total_c.config(state="normal")
+            entry_total_d.config(state="normal")
+            entry_saldo_final.config(state="normal")
+
+            entry_total_c.delete(0, tk.END)
+            entry_total_d.delete(0, tk.END)
+            entry_saldo_final.delete(0, tk.END)
+
+            entry_total_c.insert(0, "0,00")
+            entry_total_d.insert(0, "0,00")
+            entry_saldo_final.insert(0, f"{saldo_inicial:.2f}".replace(".", ","))
+
+            entry_total_c.config(state="readonly")
+            entry_total_d.config(state="readonly")
+            entry_saldo_final.config(state="readonly")
+            return
+
+        mes = int(comp[:2])
+        ano = int(comp[2:])
+        rot = combo_roteiro.get().split(" - ")[0]
+
+        try:
+            existentes = sql_lanc.listar_por_roteiro_competencia(rot, mes, ano)
+        except Exception:
+            existentes = []
+
+        for lan in existentes:
+            # lan[4] = valor (float), lan[5] = natureza ("C" ou "D") – assumindo estrutura atual
+            try:
+                valor = float(lan[4])
+            except:
+                continue
+
+            natureza = lan[5] if len(lan) > 5 else "D"
+
+            if natureza == "C":
+                total_c += valor
+            elif natureza == "D":
+                total_d += valor
+
+        saldo_final = saldo_inicial + total_c - total_d
+
+        entry_total_c.config(state="normal")
+        entry_total_d.config(state="normal")
+        entry_saldo_final.config(state="normal")
+
+        entry_total_c.delete(0, tk.END)
+        entry_total_d.delete(0, tk.END)
+        entry_saldo_final.delete(0, tk.END)
+
+        entry_total_c.insert(0, f"{total_c:.2f}".replace(".", ","))
+        entry_total_d.insert(0, f"{total_d:.2f}".replace(".", ","))
+        entry_saldo_final.insert(0, f"{saldo_final:.2f}".replace(".", ","))
+
+        entry_total_c.config(state="readonly")
+        entry_total_d.config(state="readonly")
+        entry_saldo_final.config(state="readonly")
+
+    entry_saldo_inicial.bind("<KeyRelease>", lambda e: calcular_saldos())
 
     # ===========================
     # CAMPOS DE EDIÇÃO
@@ -230,6 +333,7 @@ def tela_lancamentos():
 
         comp = entry_comp.get().strip()
         if len(comp) != 6:
+            calcular_saldos()
             return
 
         mes = int(comp[:2])
@@ -263,6 +367,8 @@ def tela_lancamentos():
                     tk.END,
                     values=(dia, conta, hist, compl, valor, nome_arquivo, compweb, datafull)
                 )
+
+        calcular_saldos()
 
     btn_carregar.config(command=carregar)
 
@@ -355,6 +461,7 @@ def tela_lancamentos():
         tree.delete(item[0])
 
         limpar_campos()
+        calcular_saldos()
 
     # ===========================
     # GRAVAR LANÇAMENTO
@@ -453,6 +560,7 @@ def tela_lancamentos():
             limpar_campos()
 
             messagebox.showinfo("OK", "Lançamento gravado.")
+            calcular_saldos()
 
         except Exception as e:
             messagebox.showerror("Erro ao gravar", str(e))
